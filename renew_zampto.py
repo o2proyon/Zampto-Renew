@@ -3,7 +3,7 @@ from seleniumbase import SB
 
 USERNAME = "alice@o2skygg.com"
 PASSWORD = "Scsi520530"
-LOCAL_PROXY = "socks5://ac27dfbb:d74d20d73082@162.43.35.176:25575"
+LOCAL_PROXY = "http://127.0.0.1:8080"
 
 def run_zampto():
     print(f"🔧 [Zampto-Renew] 启动浏览器 (载荷监控版)")
