@@ -1,23 +1,54 @@
 import time
+import argparse
 from seleniumbase import SB
 
-USERNAME = ""
-PASSWORD = ""
-LOCAL_PROXY = "http://127.0.0.1:8080"
-
-def run_zampto():
+def run_zampto(username, password, proxy_url=None, proxy_user=None, proxy_pass=None):
+    """
+    Zampto 自动续期脚本
+    
+    Args:
+        username: 登录账号
+        password: 登录密码
+        proxy_url: 代理地址，支持 socks5://host:port 或 http://host:port 格式
+        proxy_user: 代理用户名（可选）
+        proxy_pass: 代理密码（可选）
+    """
     print(f"🔧 [Zampto-Renew] 启动浏览器 (载荷监控版)")
     
-    with SB(uc=True, test=True, proxy=LOCAL_PROXY) as sb:
+    # 配置浏览器参数
+    browser_kwargs = {
+        "uc": True,
+        "test": True
+    }
+    
+    # 如果提供了代理，添加到配置中
+    if proxy_url:
+        # 如果提供了认证信息，将其嵌入到代理URL中
+        if proxy_user and proxy_pass:
+            # 格式: socks5://username:password@host:port
+            if "://" in proxy_url:
+                protocol, address = proxy_url.split("://", 1)
+                proxy_url = f"{protocol}://{proxy_user}:{proxy_pass}@{address}"
+            else:
+                proxy_url = f"socks5://{proxy_user}:{proxy_pass}@{proxy_url}"
+            print(f"🌐 使用代理: {protocol}://{proxy_user}:***@{address}")
+        else:
+            print(f"🌐 使用代理: {proxy_url}")
+        
+        browser_kwargs["proxy"] = proxy_url
+    
+    with SB(**browser_kwargs) as sb:
         print("🚀 浏览器已启动")
 
-        print("[-] 正在验证代理 IP...")
-        try:
-            sb.open("https://api.ipify.org/?format=json")
-            current_ip = sb.get_text("body")
-            print(f"✅ 当前出口 IP: {current_ip}")
-        except:
-            print("⚠️ IP 验证超时，跳过")
+        # 验证代理 IP
+        if proxy_url:
+            print("[-] 正在验证代理 IP...")
+            try:
+                sb.open("https://api.ipify.org/?format=json")
+                current_ip = sb.get_text("body")
+                print(f"✅ 当前出口 IP: {current_ip}")
+            except:
+                print("⚠️ IP 验证超时，跳过")
 
         login_url = "https://auth.zampto.net/sign-in?app_id=bmhk6c8qdqxphlyscztgl"
         print(f"[-] 访问登录页: {login_url}")
@@ -27,7 +58,7 @@ def run_zampto():
             sb.uc_gui_click_captcha()
 
         print("[-] 输入账号...")
-        sb.type('input[name="identifier"]', USERNAME)
+        sb.type('input[name="identifier"]', username)
         sb.click('button[type="submit"]')
 
         print("[-] 等待跳转到密码页...")
@@ -40,7 +71,7 @@ def run_zampto():
             return
 
         print("[-] 输入密码...")
-        sb.type('input[name="password"]', PASSWORD)
+        sb.type('input[name="password"]', password)
         sb.click('button[name="submit"]')
         
         time.sleep(2)
@@ -188,5 +219,65 @@ def run_zampto():
             print(f"❌ 读取时间失败: {e}")
             sb.save_screenshot("zampto_verify_error.png")
 
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Zampto 自动续期脚本',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+使用示例:
+  # 使用 SOCKS5 代理（带认证）
+  python zampto_renew.py -u your_username -p your_password -x socks5://127.0.0.1:1080 --proxy-user proxyuser --proxy-pass proxypass
+  
+  # 使用 SOCKS5 代理（不带认证）
+  python zampto_renew.py -u your_username -p your_password -x socks5://127.0.0.1:1080
+  
+  # 使用 HTTP 代理
+  python zampto_renew.py -u your_username -p your_password -x http://127.0.0.1:8080
+  
+  # 不使用代理
+  python zampto_renew.py -u your_username -p your_password
+        '''
+    )
+    
+    parser.add_argument('-u', '--username', 
+                       required=True,
+                       help='Zampto 登录账号')
+    
+    parser.add_argument('-p', '--password',
+                       required=True,
+                       help='Zampto 登录密码')
+    
+    parser.add_argument('-x', '--proxy',
+                       required=False,
+                       help='代理地址，支持 socks5://host:port 或 http://host:port 格式 (可选)')
+    
+    parser.add_argument('--proxy-user',
+                       required=False,
+                       help='代理服务器用户名 (可选)')
+    
+    parser.add_argument('--proxy-pass',
+                       required=False,
+                       help='代理服务器密码 (可选)')
+    
+    args = parser.parse_args()
+    
+    print("=" * 60)
+    print("🚀 Zampto 自动续期脚本")
+    print("=" * 60)
+    print(f"账号: {args.username}")
+    print(f"密码: {'*' * len(args.password)}")
+    if args.proxy:
+        print(f"代理: {args.proxy}")
+        if args.proxy_user:
+            print(f"代理认证: {args.proxy_user}:{'*' * len(args.proxy_pass) if args.proxy_pass else ''}")
+    else:
+        print(f"代理: 未使用")
+    print("=" * 60)
+    print()
+    
+    run_zampto(args.username, args.password, args.proxy, args.proxy_user, args.proxy_pass)
+
+
 if __name__ == "__main__":
-    run_zampto()
+    main()
