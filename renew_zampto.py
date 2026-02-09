@@ -1,8 +1,8 @@
 import time
 from seleniumbase import SB
 
-USERNAME = "alice@o2skygg.com"
-PASSWORD = "Scsi520530"
+USERNAME = ""
+PASSWORD = ""
 LOCAL_PROXY = "http://127.0.0.1:8080"
 
 def run_zampto():
